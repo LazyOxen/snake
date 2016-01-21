@@ -14,13 +14,8 @@ void Game::create(unsigned int width, unsigned int height)
 Game::Game(unsigned int width, unsigned int height) : 
 	_width(width),
 	_height(height),
-	_active(true),
-	_quit(false),
-	_snake(width/2, height/2)
+	_active(true)
 {
-	_food.x = ((width*3u>>2) % BLOCK_WIDTH)*BLOCK_WIDTH;
-	_food.y = ((height*3u>>2) % BLOCK_WIDTH)*BLOCK_WIDTH;
-
 	_hInstance =  GetModuleHandle( nullptr );
 
 	WNDCLASSW wc;
@@ -57,25 +52,14 @@ Game::Game(unsigned int width, unsigned int height) :
 	           width + width_adj, 
 	           height + height_adj, 
 	           TRUE);
-
-	srand( time(nullptr) );
+	_state = std::unique_ptr<State>(new GreetingState(_width, _height));
 }
 
 void Game::update() {
 	if (!_active)
 		return;
 
-	handle_input();
-
-	_snake.update();
-
-	if (_snake.head() == _food) {
-		_snake.eat();
-		position_food();
-	} else if (_snake.is_in_body(_snake.head()) || !is_in_bounds(_snake.head())) {
-		_quit = true;
-	}
-
+	_state = _state->update();
 	// update next target frame update time
 	_next_update_time += FRAME_DELAY;
 	// force redraw
@@ -84,11 +68,6 @@ void Game::update() {
 	Sleep(FRAME_DELAY/2);
 }
 
-bool Game::is_in_bounds(Point p)
-{
-	return (0 <= p.x && p.x + BLOCK_WIDTH < _width) &&
-	       (0 <= p.y && p.y + BLOCK_WIDTH < _height);
-}
 void Game::initialize_timestamp()
 {
 	_timestamp = GetTickCount();
@@ -117,28 +96,7 @@ bool Game::time_to_update()
 
 bool Game::done_playing() 
 {
-	return _quit;
-}
-
-void Game::handle_input() {
-		if (GetAsyncKeyState(VK_UP) < 0)
-			_snake.move(Direction::Up);
-		else if (GetAsyncKeyState(VK_DOWN) < 0)
-			_snake.move(Direction::Down);
-		else if (GetAsyncKeyState(VK_LEFT) < 0)
-			_snake.move(Direction::Left);
-		else if (GetAsyncKeyState(VK_RIGHT) < 0)
-			_snake.move(Direction::Right);
-		else if (GetAsyncKeyState(VK_ESCAPE) < 0)
-			_quit = true;
-}
-
-void Game::position_food()
-{
-	while (_food == _snake.head() || _snake.is_in_body(_food)) {
-		_food.x = (rand() % ((_width-BLOCK_WIDTH)/BLOCK_WIDTH))*BLOCK_WIDTH;
-		_food.y = (rand() % ((_height-BLOCK_WIDTH)/BLOCK_WIDTH))*BLOCK_WIDTH;
-	}
+	return _state->quit();
 }
 
 void Game::redraw() 
@@ -146,8 +104,7 @@ void Game::redraw()
 	PAINTSTRUCT ps;
 	HDC hdc = BeginPaint(_hwnd, &ps);
 
-	_snake.draw(hdc);
-	Rectangle(hdc, _food.x, _food.y, _food.x + BLOCK_WIDTH, _food.y + BLOCK_WIDTH);
+	_state->draw(hdc);
 
 	EndPaint(_hwnd, &ps);
 }

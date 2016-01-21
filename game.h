@@ -2,8 +2,9 @@
 #define GAME_H
 #include <windows.h>
 #include <memory>
-#include <time.h>
 #include "snake.h"
+#include "greeting_state.h"
+#include "playing_state.h"
 #include "grafx_defs.h"
 
 #define FRAME_DELAY 50
@@ -18,18 +19,14 @@ class Game {
 		Game(unsigned int width, unsigned int height);
 		void initialize_timestamp();
 		void redraw();
-		void handle_input();
 		void set_active();
 		void set_inactive();
-		void position_food();
-		bool is_in_bounds(Point p);
-		bool _quit;
+		std::unique_ptr<State> _state;
 		bool _active;
-		Snake _snake;
-		Point _food;
 		int _width;
 		int _height;
 		DWORD _timestamp;
+		// TODO: fix this
 		ULONGLONG _next_update_time;
 		HINSTANCE _hInstance;
 		HWND _hwnd;
